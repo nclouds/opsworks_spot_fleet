@@ -69,3 +69,65 @@ service supervisor restart
 The user data also installs `supervisor`, `awscli` and `jq`. Supervisor runs the watcher script as daemon and de-regiater when it gets the `termiantion-noptice` from AWS Spot.
 
 The `deregister` also happens on sclae in of the spot fleet.
+
+##De-Register on manual termination
+Termination of instances due to Scale in and spot market failures will auto de-register as they create termination notices.
+
+This is not the case for manually terminated instances. On such events use cloudwatch events + lambda to schieve the same
+
+Create a NodeJS Lambda function with the below script and create a cloudwatch event to trigger the lamda function on instance termination event.
+
+The below script it modifed to watch all stacks rather than one from https://github.com/lafraia/AWS-Opsworks-Deregister-Instance-Lambda
+
+Thanks lafraia
+```
+// Receives Cloudwatch Event when instances terminates and deregister from opsWorks
+// Useful when using Spot Instances or AutoScaling
+var aws = require('aws-sdk');
+// Your OpsWorks stack ID should be set here
+exports.handler = function (event, context) {
+    if (event.source == 'aws.ec2') {
+        var eventInstanceID = event.detail['instance-id'];
+        if (typeof eventInstanceID == 'string') {
+            var opsWorks = new aws.OpsWorks({region: 'us-east-1'});
+            opsWorks.describeStacks({}, function(err, data) {
+              if (err) {
+                console.log(err, err.stack)
+                return
+              }
+              for (var stackIdx in data.Stacks) {
+                var stack = data.Stacks[stackIdx]
+                var params = { StackId: stack.StackId }
+                opsWorks.describeInstances(params, function(err, data) {
+                    if (err) {
+                        context.done('error', err);
+                    } else {
+                        var params = null;
+                        for (var idx in data.Instances) {
+                            if (data.Instances[idx].Ec2InstanceId == eventInstanceID) {
+                                params = {InstanceId: data.Instances[idx].InstanceId};
+                                break;
+                            }
+                        }
+                        if (params !== null) {
+                            opsWorks.deregisterInstance(params, function(err, data) {
+                                    console.log('Deregistering instance from OpsWorks: InstanceID=' + eventInstanceID);
+                                    if (err) {
+                                        context.done('error', err);
+                                    } else {
+                                        context.done(null, 'Deregistration OK');
+                                    }
+                            });
+                        } else {
+                            context.done(null,"InstanceID " + eventInstanceID + " not listed in OpsWorks. Exiting...");
+                        }
+                    }
+                })
+              }
+            })
+        } else {
+            context.done(error,'Invalid event InstanceID: ' + eventInstanceID);
+        }
+    }
+}
+```
