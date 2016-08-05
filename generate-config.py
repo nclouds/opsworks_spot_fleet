@@ -59,7 +59,8 @@ def generate_config_json(layer_id, region, ami_id, ssh_key, subnet_ids, instance
   with open ("userdata.template", "r") as userdata:
     user_data=base64.b64encode(str(userdata.read()%{"layerid":layer_id}).encode('ascii'))
     userdata.close()
-  #JSON Data	
+  #JSON Data
+  download_price_data()	
   json_data['IamFleetRole'] = iam_fleet_role
   json_data["AllocationStrategy"] = "lowestPrice"
   json_data["TargetCapacity"] = 1
@@ -91,5 +92,4 @@ def generate_config_json(layer_id, region, ami_id, ssh_key, subnet_ids, instance
     config_json.write(json.dumps(json_data, indent=2))
     config_json.close()
     
-download_price_data()
 generate_config_json()
