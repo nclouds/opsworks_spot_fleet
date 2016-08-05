@@ -38,13 +38,13 @@
 ```
 
 This generates the `config.json` with `user-data` that will auto-register to the specified `layer-id` and deregister by watchng the termination notices every 5 seconds
-###user-data register part
+###user-data register
 ```
 opsworks_instance_id=$(aws opsworks register  --region us-east-1 --infrastructure-class ec2   --stack-id ${stackid}  --override-hostname $hostname --use-instance-profile  --local 2>&1 |grep -o 'Instance ID: .*' |cut -d' ' -f3)
 aws opsworks wait instance-registered --region us-east-1 --instance-id $opsworks_instance_id
 aws opsworks --region us-east-1 assign-instance --instance-id  $opsworks_instance_id --layer-ids $layerid
 ```
-###user-data de-register part
+###user-data de-register
 ```
 #!/bin/bash
 while sleep 5
