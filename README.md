@@ -8,6 +8,8 @@
 #Usage
 1. Clone the repo and run `pip install -r requirements.txt`.
 2. User the `generate_config.py` to create the spot fleet configuraiton json.
+> Note:
+> The spot price can be specified as % of on-demand. Price is calculated at the specified percentage for each instance type specified using the AWS Price API. This downloads the AWS Price Index file in CSV format (~30MB)
 
 ##Options
 ```
