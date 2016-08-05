@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import json
-import boto3
 import click
 import base64
 import pandas
@@ -49,20 +48,19 @@ def calculate_percentage_price(instance_type, region='us-west-2', percentage=30)
 @click.option('--ssh-key', required=True, help='SSH Key for the instances')
 @click.option('--subnet-ids', multiple=True, help='Tuple of subnets to launch the AMI')
 @click.option('--instance-types', required=True, multiple=True, default='c3.large', help='Instance Types to launch')
-@click.option('--iam-fleet-role', required=True, help='IAM SpotFleet Role')
-@click.option('--iam-instance-profile', required=True, help='EC2 IAM Instance Profile')
+@click.option('--iam-fleet-role', required=True, help='IAM SpotFleet Rolei ARN')
+@click.option('--iam-instance-profile', required=True, help='EC2 IAM Instance Profile ARN')
 @click.option('--security-group-ids', required=True, multiple=True, help='Security Groups for the instances')
 @click.option('--spot-price', required=True, type=int, help='Maximum Spot Price in % of on-Demand')
 def generate_config_json(layer_id, region, ami_id, ssh_key, subnet_ids, instance_types, iam_fleet_role, iam_instance_profile, security_group_ids, spot_price):
   #AWS Client
-  iam_client = boto3.client('iam')
   #Variables
   json_data = {}
-  with open ("userdata.sh", "r") as userdata:
+  with open ("userdata.template", "r") as userdata:
     user_data=base64.b64encode(str(userdata.read()%{"layerid":layer_id}).encode('ascii'))
     userdata.close()
   #JSON Data	
-  json_data['IamFleetRole'] = iam_client.get_role(RoleName=iam_fleet_role)['Role']['Arn']
+  json_data['IamFleetRole'] = iam_fleet_role
   json_data["AllocationStrategy"] = "lowestPrice"
   json_data["TargetCapacity"] = 1
   json_data["SpotPrice"] = spot_price
@@ -77,7 +75,7 @@ def generate_config_json(layer_id, region, ami_id, ssh_key, subnet_ids, instance
       launch_specifications["KeyName"] = ssh_key
       launch_specifications["SpotPrice"] = calculate_percentage_price(instance_type, region=region, percentage=spot_price)
       launch_specifications["IamInstanceProfile"] =  {}
-      launch_specifications["IamInstanceProfile"]["Arn"] = iam_client.get_instance_profile(InstanceProfileName=iam_instance_profile)['InstanceProfile']['Arn']
+      launch_specifications["IamInstanceProfile"]["Arn"] = iam_instance_profile
       launch_specifications["UserData"] = user_data.decode('ascii')
       launch_specifications["NetworkInterfaces"] = []
       

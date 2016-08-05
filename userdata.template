@@ -1,0 +1,39 @@
+#!/bin/bash
+#Variables
+layerid=%(layerid)s
+#Install Requisties
+apt-get update
+apt-get upgrade -y
+apt-get install python-pip supervisor jq -y
+pip install --upgrade pip awscli
+
+#Calculate variables
+layername=$(aws opsworks --region=us-east-1 describe-layers  --layer-ids $layerid | jq -r .Layers[].Name)
+stackid=$(aws opsworks --region=us-east-1 describe-layers  --layer-ids $layerid | jq -r .Layers[].StackId)
+hostname=$layername-$(curl -s http://169.254.169.254/latest/meta-data/instance-id | cut -d'-' -f2)
+
+#Set Hostname
+hostname $hostname
+echo $hostname > /etc/hostname
+sed -i "2i127.0.1.1 $hostname" /etc/hosts
+
+#Register Instance
+opsworks_instance_id=$(aws opsworks register  --region us-east-1 --infrastructure-class ec2   --stack-id ${stackid}  --override-hostname $hostname --use-instance-profile  --local 2>&1 |grep -o 'Instance ID: .*' |cut -d' ' -f3)
+aws opsworks wait instance-registered --region us-east-1 --instance-id $opsworks_instance_id
+aws opsworks --region us-east-1 assign-instance --instance-id  $opsworks_instance_id --layer-ids $layerid
+cat <<EOF > /usr/local/bin/spot-terminate
+#!/bin/bash
+while sleep 5
+  do
+    if curl --output /dev/null --silent --head --fail http://169.254.169.254/latest/meta-data/spot/termination-time
+      then
+        aws opsworks --region us-east-1 deregister-instance --instance-id $opsworks_instance_id
+      fi
+  done
+EOF
+chmod +x /usr/local/bin/spot-terminate
+cat <<EOF >> /etc/supervisor/conf.d/spot-terminate.conf
+[program:spot-terminate]
+command=/usr/local/bin/spot-terminate
+EOF
+service supervisor restart
