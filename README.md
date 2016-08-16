@@ -19,6 +19,7 @@
   --ami-id TEXT                AMI to launch. Default is Ubuntu 14.04 LTS                  [required]
   --ssh-key TEXT               SSH Key Name for the instances                              [required]
   --subnet-ids TEXT            Subnets to launch the AMI -- Specify multipe times
+  --target-capacity            Spot fleet attempts to launch the number of Spot instances that are required to meet the target capacity
   --instance-types TEXT        Instance Types to launch - Specify multiple times           [required]
   --iam-fleet-role TEXT        IAM SpotFleet Rolei ARN                                     [required]
   --iam-instance-profile TEXT  EC2 IAM Instance Profile ARN                                [required]

@@ -44,6 +44,7 @@ def calculate_percentage_price(instance_type, region='us-west-2', percentage=30)
 @click.command()
 @click.option('--layer-id', required=True, help='Layer ID to add the Spot Fleet instances to.')
 @click.option('--region', required=True, default='us-west-2', help='Region Name to create the Spot Fleet')
+@click.option('--target-capacity', required=True, default=1, type=int, help='Target capacity for instances')
 @click.option('--ami-id', required=True, default='ami-962fedf6', help='AMI to launch. Default is Ubuntu 14.04 LTS')
 @click.option('--ssh-key', required=True, help='SSH Key for the instances')
 @click.option('--subnet-ids', multiple=True, help='Subnets to launch the AMI -- Specify multipe times')
@@ -52,7 +53,7 @@ def calculate_percentage_price(instance_type, region='us-west-2', percentage=30)
 @click.option('--iam-instance-profile', required=True, help='EC2 IAM Instance Profile ARN')
 @click.option('--security-group-ids', required=True, multiple=True, help='Security Groups for the instances -- Specify mutiple times')
 @click.option('--spot-price', required=True, type=int, help='Maximum Spot Price in % of on-Demand')
-def generate_config_json(layer_id, region, ami_id, ssh_key, subnet_ids, instance_types, iam_fleet_role, iam_instance_profile, security_group_ids, spot_price):
+def generate_config_json(layer_id, region, ami_id, ssh_key, subnet_ids, instance_types, iam_fleet_role, iam_instance_profile, security_group_ids, spot_price,target_capacity):
   #AWS Client
   #Variables
   json_data = {}
@@ -63,7 +64,7 @@ def generate_config_json(layer_id, region, ami_id, ssh_key, subnet_ids, instance
   download_price_data()	
   json_data['IamFleetRole'] = iam_fleet_role
   json_data["AllocationStrategy"] = "lowestPrice"
-  json_data["TargetCapacity"] = 1
+  json_data["TargetCapacity"] = target_capacity
   json_data["SpotPrice"] = spot_price
   json_data["TerminateInstancesWithExpiration"] = True
   json_data["Type"] = "maintain"
